@@ -1,23 +1,27 @@
 // Workday Autofill - Content Script
 // Runs on *.myworkdayjobs.com pages
 
+// Active profile: loaded from storage on confirm, falls back to hardcoded PROFILE
+let activeProfile = null;
+
 // 1. Identify all fields on the page and their expected values
 function getMappedFields() {
   const fields = [];
+  const p = activeProfile;
 
   // Email (uses data-automation-id)
   const emailField = document.querySelector('[data-automation-id="email"]');
   if (emailField) {
-    fields.push({ element: emailField, value: PROFILE.email });
+    fields.push({ element: emailField, value: p.email });
   }
 
   // Simple Text Fields (use unique IDs)
   const simpleFields = [
-    { id: "name--legalName--firstName", value: PROFILE.firstName },
-    { id: "name--legalName--lastName", value: PROFILE.lastName },
-    { id: "address--city", value: PROFILE.city },
-    { id: "address--postalCode", value: PROFILE.zipCode },
-    { id: "phoneNumber--phoneNumber", value: PROFILE.phoneNumber },
+    { id: "name--legalName--firstName", value: p.firstName },
+    { id: "name--legalName--lastName", value: p.lastName },
+    { id: "address--city", value: p.city },
+    { id: "address--postalCode", value: p.zipCode },
+    { id: "phoneNumber--phoneNumber", value: p.phoneNumber },
   ];
 
   simpleFields.forEach((item) => {
@@ -32,16 +36,16 @@ function getMappedFields() {
   const addr2 = document.getElementById("address--addressLine2");
 
   if (addr1) {
-    let val1 = PROFILE.addressLine1;
+    let val1 = p.addressLine1;
     // If Line 2 input doesn't exist, combine Line 1 + Line 2
-    if (!addr2 && PROFILE.addressLine2) {
-      val1 += " " + PROFILE.addressLine2;
+    if (!addr2 && p.addressLine2) {
+      val1 += " " + p.addressLine2;
     }
     fields.push({ element: addr1, value: val1 });
   }
 
   if (addr2) {
-    fields.push({ element: addr2, value: PROFILE.addressLine2 });
+    fields.push({ element: addr2, value: p.addressLine2 });
   }
 
   return fields;
@@ -125,17 +129,22 @@ function showConfirmationBanner() {
 
 // Start autofill process with MutationObserver for SPA navigation
 function startAutofill() {
-  // Fill any existing fields immediately
-  runAutofillSequence();
+  // Load saved profile from storage, fall back to hardcoded PROFILE
+  chrome.storage.sync.get(["profile"], (data) => {
+    activeProfile = data.profile?.firstName ? data.profile : PROFILE;
 
-  // Watch for DOM changes (Workday loads fields dynamically)
-  const observer = new MutationObserver(() => {
+    // Fill any existing fields immediately
     runAutofillSequence();
-  });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
+    // Watch for DOM changes (Workday loads fields dynamically)
+    const observer = new MutationObserver(() => {
+      runAutofillSequence();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   });
 }
 
