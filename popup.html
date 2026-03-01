@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 280px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: white;
+        overflow: hidden;
+      }
+      .header {
+        background: #1a73e8;
+        color: white;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+      .header-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .body {
+        padding: 8px 16px 16px;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #dadce0;
+      }
+      .toggle-label {
+        font-size: 14px;
+        color: #202124;
+      }
+      .toggle-label.muted {
+        color: #9aa0a6;
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #1a73e8;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      .edit-btn {
+        width: 100%;
+        padding: 10px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 12px;
+      }
+      .edit-btn:hover {
+        background: #1557b0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img id="logo" alt="" />
+      <span class="header-title">Workday Autofill</span>
+    </div>
+    <div class="body">
+      <div class="toggle-row">
+        <span class="toggle-label" id="global-label">Enabled (Globally)</span>
+        <input type="checkbox" id="global-toggle" />
+      </div>
+      <div class="toggle-row" style="border-bottom: none">
+        <span class="toggle-label" id="domain-label">Enabled (This Domain)</span>
+        <input type="checkbox" id="domain-toggle" />
+      </div>
+      <button class="edit-btn" id="edit-profile-btn">Edit Profile</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
