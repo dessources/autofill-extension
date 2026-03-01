@@ -88,7 +88,7 @@ function runAutofillSequence() {
 // Create and show the floating confirmation modal
 function showConfirmationBanner() {
   // Don't show if modal already exists
-  if (document.getElementById("workday-autofill-modal")) return;
+  if (document.getElementById(MODAL_ID)) return;
 
   // Inject modal CSS
   const styleTag = document.createElement("style");
@@ -97,20 +97,8 @@ function showConfirmationBanner() {
 
   // Build modal
   const modal = document.createElement("div");
-  modal.id = "workday-autofill-modal";
-  modal.innerHTML = `
-    <div class="waf-header">
-      <img class="waf-logo" src="${chrome.runtime.getURL("workday_autofill_minimalist.png")}" alt="">
-      <span class="waf-header-title">Workday Autofill</span>
-      <button class="waf-close" id="workday-autofill-cancel">✕</button>
-    </div>
-    <div class="waf-body">
-      <p class="waf-headline">Application page detected!</p>
-      <p class="waf-sub">Fill your application fields automatically using your saved profile.</p>
-      <button class="waf-confirm-btn" id="workday-autofill-confirm">Autofill Now</button>
-      <button class="waf-cancel-btn" id="workday-autofill-cancel-btn">No Thanks</button>
-    </div>
-  `;
+  modal.id = MODAL_ID;
+  modal.innerHTML = MODAL_HTML;
 
   document.body.appendChild(modal);
 
