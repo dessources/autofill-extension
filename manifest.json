@@ -4,7 +4,7 @@
   "version": "1.0",
   "manifest_version": 3,
   "action": {
-    "default_popup": "hello.html",
+    "default_popup": "popup.html",
     "default_icon": "extension-logo.png"
   },
   "web_accessible_resources": [
@@ -13,11 +13,11 @@
       "matches": ["*://*.myworkdayjobs.com/*"]
     }
   ],
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "content_scripts": [
     {
       "matches": ["*://*.myworkdayjobs.com/*"],
-      "js": ["styles.js", "profile.js", "content.js"],
+      "js": ["styles.js", "profile.js", "util.js", "content.js"],
       "run_at": "document_idle"
     }
   ]
