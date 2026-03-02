@@ -26,10 +26,17 @@ function showConfirmationBanner() {
   };
 
   confirmBtn.addEventListener("click", () => {
-    modal.remove();
-    styleTag.remove();
-    startAutofill();
-    console.log("[Workday Autofill] User confirmed - autofill started");
+    const domain = window.location.hostname.split(".")[0];
+    chrome.storage.sync.get(["confirmed_domains"], (data) => {
+      const confirmed = data.confirmed_domains || {};
+      confirmed[domain] = true;
+      chrome.storage.sync.set({ confirmed_domains: confirmed }, () => {
+        modal.remove();
+        styleTag.remove();
+        startAutofill();
+        console.log(`[Workday Autofill] Consent saved for ${domain} - autofill started`);
+      });
+    });
   });
 
   cancelBtn.addEventListener("click", dismiss);

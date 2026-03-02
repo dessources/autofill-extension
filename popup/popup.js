@@ -38,12 +38,21 @@ globalToggle.addEventListener("change", () => {
   chrome.storage.sync.set({ enabled_global: globalToggle.checked });
 });
 
-// Persist domain toggle
+// Persist domain toggle; turning a domain off also clears its consent
 domainToggle.addEventListener("change", () => {
-  chrome.storage.sync.get(["enabled_domains"], (data) => {
+  chrome.storage.sync.get(["enabled_domains", "confirmed_domains"], (data) => {
     const domains = data.enabled_domains || {};
     domains[currentDomain] = domainToggle.checked;
-    chrome.storage.sync.set({ enabled_domains: domains });
+
+    const update = { enabled_domains: domains };
+
+    if (!domainToggle.checked) {
+      const confirmed = data.confirmed_domains || {};
+      delete confirmed[currentDomain];
+      update.confirmed_domains = confirmed;
+    }
+
+    chrome.storage.sync.set(update);
   });
 });
 
