@@ -4,7 +4,7 @@
   "version": "1.0",
   "manifest_version": 3,
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": "extension-logo.png"
   },
   "web_accessible_resources": [
@@ -17,7 +17,17 @@
   "content_scripts": [
     {
       "matches": ["*://*.myworkdayjobs.com/*"],
-      "js": ["styles.js", "profile.js", "util.js", "content.js"],
+      "js": [
+        "styles.js",
+        "util.js",
+        "drivers/workday.js",
+        "helpers/fillData.js",
+        "helpers/applyStyles.js",
+        "helpers/runAutofillSequence.js",
+        "helpers/showConfirmationBanner.js",
+        "helpers/startAutofill.js",
+        "main.js"
+      ],
       "run_at": "document_idle"
     }
   ]

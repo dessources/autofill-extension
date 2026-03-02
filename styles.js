@@ -9,10 +9,13 @@ const STYLES = {
   },
 
   // Floating modal CSS — injected as a <style> tag
-  modalCSS: `
+  //the "/*CSS*/" comment here helps with the syntax highlighting
+  //via the es6-string-html vscode extension
+
+  modalCSS: /*CSS*/ `
     #workday-autofill-modal {
       position: fixed;
-      top: 20px;
+      top: 100px;
       right: 20px;
       width: 280px;
       background: white;
@@ -29,6 +32,7 @@ const STYLES = {
       display: flex;
       align-items: center;
       gap: 10px;
+      user-select: none;
     }
     #workday-autofill-modal .waf-logo {
       width: 24px;
