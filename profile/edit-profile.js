@@ -5,6 +5,7 @@ const FIELDS = [
   "lastName",
   "email",
   "phoneNumber",
+  "phoneType",
   "addressLine1",
   "addressLine2",
   "city",
@@ -13,7 +14,8 @@ const FIELDS = [
   "country",
 ];
 
-document.getElementById("logo").src = chrome.runtime.getURL("extension-logo.png");
+document.getElementById("logo").src =
+  chrome.runtime.getURL("extension-logo.png");
 
 // Load saved profile into form fields
 chrome.storage.sync.get(["profile"], (data) => {

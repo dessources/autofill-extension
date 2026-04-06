@@ -1,0 +1,1021 @@
+# Workday Autofill Chrome Extension: A Step-by-Step Guide
+
+## 1. Project Overview
+
+This document provides a detailed walkthrough of the Workday Autofill Chrome Extension. The extension is designed to help users automatically fill out job applications on Workday sites (`*.myworkdayjobs.com`). It is built using vanilla JavaScript with a focus on a clean, modular architecture that separates concerns into different files and directories. The extension uses content scripts to interact with Workday pages, a popup for user settings, and a dedicated page for editing the user's profile data.
+
+## 2. Project Structure
+
+The project is organized into several directories and root files. Here is the complete file structure:
+
+```
+chrome_extension/
+|-- drivers/
+|   `-- workday.js
+|-- helpers/
+|   |-- applyStyles.js
+|   |-- fillData.js
+|   |-- runAutofillSequence.js
+|   |-- showConfirmationBanner.js
+|   `-- startAutofill.js
+|-- popup/
+|   |-- popup.html
+|   `-- popup.js
+|-- profile/
+|   |-- edit-profile.html
+|   `-- edit-profile.js
+|-- .gitignore
+|-- extension-logo.png
+|-- main.js
+|-- manifest.json
+|-- styles.js
+`-- util.js
+```
+
+### Directory Meanings:
+
+*   **`drivers/`**: Contains the logic for interacting with specific Applicant Tracking Systems (ATS). In this case, it's tailored for Workday.
+*   **`helpers/`**: A collection of scripts that perform specific tasks like filling data, applying styles, and managing the autofill process.
+*   **`popup/`**: The UI and logic for the extension's popup, which is shown when the user clicks the extension icon in the Chrome toolbar.
+*   **`profile/`**: The UI and logic for the page where users can edit their personal information for the autofill feature.
+
+## 3. File-by-File Guide
+
+This section provides the full code and an explanation for each file in the project.
+
+### 3.1. `manifest.json`
+
+**Description:**
+This is the core configuration file for the Chrome extension. It defines the extension's name, version, permissions, content scripts, and other essential metadata.
+
+**Code:**
+```json
+{
+  "name": "Workday Autofill",
+  "description": "Helps students fill out Workday job applications",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "extension-logo.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["extension-logo.png"],
+      "matches": ["*://*.myworkdayjobs.com/*"]
+    }
+  ],
+  "permissions": ["storage", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.myworkdayjobs.com/*"],
+      "js": [
+        "styles.js",
+        "util.js",
+        "drivers/workday.js",
+        "helpers/fillData.js",
+        "helpers/applyStyles.js",
+        "helpers/runAutofillSequence.js",
+        "helpers/showConfirmationBanner.js",
+        "helpers/startAutofill.js",
+        "main.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
+```
+
+### 3.2. `main.js`
+
+**Description:**
+This is the main entry point for the content script. It runs on Workday pages, checks user settings from `chrome.storage`, and decides whether to start the autofill process or show a confirmation banner.
+
+**Code:**
+```javascript
+// Workday Autofill - Main Entry Point
+// Runs on *.myworkdayjobs.com pages
+
+// Active profile: set by startAutofill(), read by getMappedFields() in the active driver
+let activeProfile = null;
+
+// getMappedFields() is provided by the active ATS driver (e.g. drivers/workday.js)
+
+console.log(
+  "[Workday Autofill] Content script loaded on:",
+  window.location.href,
+);
+
+chrome.storage.sync.get(
+  ["enabled_global", "enabled_domains", "confirmed_domains"],
+  (data) => {
+    const domain = window.location.hostname.split(".")[0]; // e.g. "github" from "github.myworkdayjobs.com"
+    const enabledDomains = data.enabled_domains || {};
+    const domainAllowed = enabledDomains[domain] !== false;
+
+    if (data.enabled_global === false) return; // globally disabled
+
+    if (data.confirmed_domains?.[domain]) {
+      // already consented to this company
+      startAutofill();
+    } else if (domainAllowed) {
+      showConfirmationBanner(); // only called when actually needed
+    }
+  },
+);
+```
+
+### 3.3. `styles.js`
+
+**Description:**
+This file defines the CSS styles used by the extension, including the highlight style for filled fields and the styles for the confirmation modal.
+
+**Code:**
+```javascript
+// Style constants for Workday Autofill
+// This file is loaded before content.js and shares the same scope
+
+const STYLES = {
+  // Highlight styles for auto-filled fields
+  field: {
+    backgroundColor: "#e8f0fe",
+    boxShadow: "0 0 4px 1px #1a73e8, 0 0 12px 4px rgba(26, 115, 232, 0.4)",
+  },
+
+  // Floating modal CSS — injected as a <style> tag
+  //the "/*CSS*/" comment here helps with the syntax highlighting
+  //via the es6-string-html vscode extension
+
+  modalCSS: /*CSS*/ `
+    #workday-autofill-modal {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      width: 280px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      font-family: system-ui, -apple-system, sans-serif;
+      z-index: 999999;
+      overflow: hidden;
+    }
+    #workday-autofill-modal .waf-header {
+      background: #1a73e8;
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    #workday-autofill-modal .waf-logo {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    #workday-autofill-modal .waf-header-title {
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+      margin: 0;
+    }
+    #workday-autofill-modal .waf-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      opacity: 0.8;
+    }
+    #workday-autofill-modal .waf-close:hover { opacity: 1; }
+    #workday-autofill-modal .waf-body {
+      padding: 20px 16px;
+    }
+    #workday-autofill-modal .waf-headline {
+      font-size: 15px;
+      font-weight: 600;
+      color: #202124;
+      margin: 0 0 8px;
+    }
+    #workday-autofill-modal .waf-sub {
+      font-size: 13px;
+      color: #5f6368;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+    #workday-autofill-modal .waf-confirm-btn {
+      width: 100%;
+      padding: 10px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    #workday-autofill-modal .waf-confirm-btn:hover { background: #1557b0; }      
+    #workday-autofill-modal .waf-cancel-btn {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    #workday-autofill-modal .waf-cancel-btn:hover { background: #f8f9fa; }       
+  `,
+};
+```
+
+### 3.4. `util.js`
+
+**Description:**
+This file contains shared utility constants and HTML templates used across the extension, such as the HTML for the confirmation modal and a demo user profile.
+
+**Code:**
+```javascript
+// Shared UI constants for Workday Autofill
+// Loaded before content.js in shared scope
+
+const LOGO_FILENAME = "extension-logo.png";
+
+const MODAL_IDS = {
+  modal:   "workday-autofill-modal",
+  confirm: "workday-autofill-confirm",
+  cancel:  "workday-autofill-cancel-btn",
+  close:   "workday-autofill-cancel",
+};
+
+const MODAL_HTML = `
+  <div class="waf-header">
+    <img class="waf-logo" src="${chrome.runtime.getURL(LOGO_FILENAME)}" alt="">
+    <span class="waf-header-title">Workday Autofill</span>
+    <button class="waf-close" id="${MODAL_IDS.close}">✔</button>
+  </div>
+  <div class="waf-body">
+    <p class="waf-headline">Application page detected!</p>
+    <p class="waf-sub">Fill your application fields automatically using your saved profile.</p>
+    <button class="waf-confirm-btn" id="${MODAL_IDS.confirm}">Autofill Now</button>
+    <button class="waf-cancel-btn" id="${MODAL_IDS.cancel}">No Thanks</button>
+  </div>
+`;
+
+const DEMO_PROFILE = {
+  firstName: "John",
+  lastName: "Doe",
+  email: "your-email@fiu.edu",
+  addressLine1: "123 Test Street",
+  addressLine2: "Apt 456",
+  city: "Miami",
+  state: "Florida",
+  zipCode: "33199",
+  phoneNumber: "3051234567",
+  country: "United States",
+};
+```
+
+### 3.5. `drivers/workday.js`
+
+**Description:**
+This is the driver file for Workday. It contains the `getMappedFields` function, which is responsible for finding the form fields on a Workday page and mapping them to the user's profile data.
+
+**Code:**
+```javascript
+// Workday ATS Driver
+// Defines getMappedFields() for *.myworkdayjobs.com
+// Note: data-automation-id is on wrapper divs — use input IDs directly (except email)
+
+function getMappedFields() {
+  const simpleMappedFields = [];
+  const complexMappedFields = [];
+  const p = activeProfile;
+
+  // Email — data-automation-id is on the input itself for this field
+  const emailField = document.querySelector('[data-automation-id="email"]');
+  if (emailField) {
+    simpleMappedFields.push({ element: emailField, value: p.email });
+  }
+
+  // Simple text fields — consistent IDs across all Workday companies
+  const simpleFields = [
+    { id: "name--legalName--firstName", value: p.firstName },
+    { id: "name--legalName--lastName", value: p.lastName },
+    { id: "address--city", value: p.city },
+    { id: "address--postalCode", value: p.zipCode },
+    { id: "phoneNumber--phoneNumber", value: p.phoneNumber },
+  ];
+
+  const complexFields = [
+    { id: "country--country", profileKey: "country" },
+    { id: "phoneNumber--phoneType", profileKey: "phoneType" },
+    { id: "address--countryRegion", profileKey: "state" },
+  ];
+
+  simpleFields.forEach(({ id, value }) => {
+    const el = document.getElementById(id);
+    if (el) simpleMappedFields.push({ element: el, value });
+  });
+
+  complexFields.forEach(({ id, profileKey }) => {
+    const el = document.getElementById(id);
+    if (el) {
+      complexMappedFields.push({
+        element: el,
+        value: p[profileKey],
+        id,
+        type: "dropdown",
+      });
+    }
+  });
+
+  // Address: if line 2 input is absent, combine both lines into line 1
+  const addr1 = document.getElementById("address--addressLine1");
+  const addr2 = document.getElementById("address--addressLine2");
+
+  if (addr1) {
+    let val1 = p.addressLine1;
+    if (!addr2 && p.addressLine2) val1 += " " + p.addressLine2;
+    simpleMappedFields.push({ element: addr1, value: val1 });
+  }
+
+  if (addr2) {
+    simpleMappedFields.push({ element: addr2, value: p.addressLine2 });
+  }
+
+  return { simpleMappedFields, complexMappedFields };
+}
+```
+
+### 3.6. `helpers/applyStyles.js`
+
+**Description:**
+This helper script applies visual styles to the fields that have been autofilled, providing feedback to the user.
+
+**Code:**
+```javascript
+// Style Pass: Apply visual feedback to auto-filled fields
+function applyStyles() {
+  const { simpleMappedFields, complexMappedFields } = getMappedFields();
+
+  [...simpleMappedFields, ...complexMappedFields].forEach(
+    ({ element, value }) => {
+      // Only style if the current value matches our data
+      if (
+        element &&
+        (element.value === value || element.textContent === value)
+      ) {
+        element.style.backgroundColor = STYLES.field.backgroundColor;
+        element.style.boxShadow = STYLES.field.boxShadow;
+      }
+    },
+  );
+}
+```
+
+### 3.7. `helpers/fillData.js`
+
+**Description:**
+This script is responsible for filling the form fields with the user's data. It handles both simple text inputs and complex dropdown fields.
+
+**Code:**
+```javascript
+// Data Pass: Fill empty fields and dispatch events
+function fillData() {
+  let newFields = 0;
+  const { simpleMappedFields, complexMappedFields } = getMappedFields();
+  let filledCount = 0;
+
+  simpleMappedFields.forEach(({ element, value }) => {
+    if (element && !element.value && value) {
+      element.value = value;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      filledCount++;
+    }
+  });
+
+  complexMappedFields.forEach(({ element, value, id, profileKey }) => {
+    if (element && value) {
+      if (element.textContent == "Select One") {
+        element.click();
+
+        setTimeout(() => {
+          const popupId = document
+            .querySelector(`#${id}`)
+            .getAttribute("aria-controls");
+          if (!popupId) return;
+
+          const popupEl = document.getElementById(popupId);
+          if (!popupEl) return;
+
+          const options = popupEl.querySelectorAll('li[role="option"]');
+          for (const option of options) {
+            if (option.textContent === value) {
+              option.click();
+              filledCount++;
+              break;
+            }
+          }
+        }, 0);
+      }
+    }
+  });
+
+  if (filledCount > 0) {
+    console.log(`[Workday Autofill] Filled ${filledCount} fields.`);
+  }
+}
+```
+
+### 3.8. `helpers/runAutofillSequence.js`
+
+**Description:**
+This script orchestrates the autofill process by calling `fillData` and then `applyStyles` with a short delay to ensure that React has time to process the changes.
+
+**Code:**
+```javascript
+// Orchestrator: Run data pass, then wait for React, then run style pass
+function runAutofillSequence() {
+  fillData();
+  // Wait for React re-render cycle to complete
+  setTimeout(applyStyles, 50);
+}
+```
+
+### 3.9. `helpers/showConfirmationBanner.js`
+
+**Description:**
+This script creates and displays the confirmation modal that asks the user for permission to autofill the page.
+
+**Code:**
+```javascript
+// Create and show the floating confirmation modal
+function showConfirmationBanner() {
+  // Don't show if modal already exists
+  if (document.getElementById(MODAL_IDS.modal)) return;
+
+  // Inject modal CSS
+  const styleTag = document.createElement("style");
+  styleTag.textContent = STYLES.modalCSS;
+  document.head.appendChild(styleTag);
+
+  // Build modal
+  const modal = document.createElement("div");
+  modal.id = MODAL_IDS.modal;
+  modal.innerHTML = MODAL_HTML;
+
+  document.body.appendChild(modal);
+
+  const confirmBtn = document.getElementById(MODAL_IDS.confirm);
+  const cancelBtn = document.getElementById(MODAL_IDS.cancel);
+  const closeBtn = document.getElementById(MODAL_IDS.close);
+
+  const dismiss = () => {
+    modal.remove();
+    styleTag.remove();
+    console.log("[Workday Autofill] User declined - autofill disabled");
+  };
+
+  confirmBtn.addEventListener("click", () => {
+    const domain = window.location.hostname.split(".")[0];
+    chrome.storage.sync.get(["confirmed_domains"], (data) => {
+      const confirmed = data.confirmed_domains || {};
+      confirmed[domain] = true;
+      chrome.storage.sync.set({ confirmed_domains: confirmed }, () => {
+        modal.remove();
+        styleTag.remove();
+        startAutofill();
+        console.log(`[Workday Autofill] Consent saved for ${domain} - autofill started`);
+      });
+    });
+  });
+
+  cancelBtn.addEventListener("click", dismiss);
+  closeBtn.addEventListener("click", dismiss);
+}
+```
+
+### 3.10. `helpers/startAutofill.js`
+
+**Description:**
+This script starts the autofill process. It loads the user's profile from storage and sets up a `MutationObserver` to re-run the autofill sequence when the page content changes (which is common in Single Page Applications like Workday).
+
+**Code:**
+```javascript
+// Start autofill process with MutationObserver for SPA navigation
+function startAutofill() {
+  // Load saved profile from storage, fall back to hardcoded DEMO_PROFILE
+  chrome.storage.sync.get(["profile"], (data) => {
+    activeProfile = data.profile?.firstName ? data.profile : DEMO_PROFILE;
+
+    // Fill any existing fields immediately
+    runAutofillSequence();
+
+    // Watch for DOM changes
+    const observer = new MutationObserver(() => {
+      runAutofillSequence();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  });
+}
+```
+
+### 3.11. `popup/popup.html`
+
+**Description:**
+This is the HTML file for the extension's popup. It provides toggles for enabling or disabling the extension globally and for the current domain.
+
+**Code:**
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 280px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: white;
+        overflow: hidden;
+      }
+      .header {
+        background: #1a73e8;
+        color: white;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+      .header-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .body {
+        padding: 8px 16px 16px;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #dadce0;
+      }
+      .toggle-label {
+        font-size: 14px;
+        color: #202124;
+      }
+      .toggle-label.muted {
+        color: #9aa0a6;
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #1a73e8;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      .edit-btn {
+        width: 100%;
+        padding: 10px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 12px;
+      }
+      .edit-btn:hover {
+        background: #1557b0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img id="logo" alt="" />
+      <span class="header-title">Workday Autofill</span>
+    </div>
+    <div class="body">
+      <div class="toggle-row">
+        <span class="toggle-label" id="global-label">Enabled (Globally)</span>   
+        <input type="checkbox" id="global-toggle" />
+      </div>
+      <div class="toggle-row" style="border-bottom: none">
+        <span class="toggle-label" id="domain-label">Enabled (This Domain)</span>
+        <input type="checkbox" id="domain-toggle" />
+      </div>
+      <button class="edit-btn" id="edit-profile-btn">Edit Profile</button>       
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
+```
+
+### 3.12. `popup/popup.js`
+
+**Description:**
+This is the JavaScript file for the popup. It handles the logic for the toggles and saving the user's preferences to `chrome.storage`.
+
+**Code:**
+```javascript
+// Workday Autofill — Popup Logic
+
+document.getElementById("logo").src = chrome.runtime.getURL("extension-logo.png");
+
+const globalToggle = document.getElementById("global-toggle");
+const domainToggle = document.getElementById("domain-toggle");
+const domainLabel = document.getElementById("domain-label");
+
+let currentDomain = null;
+
+// Detect current tab's Workday subdomain
+chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+  try {
+    const hostname = new URL(tab.url).hostname; // e.g. "github.myworkdayjobs.com"
+    if (hostname.endsWith(".myworkdayjobs.com")) {
+      currentDomain = hostname.split(".")[0]; // e.g. "github"
+    }
+  } catch (_) {}
+
+  if (!currentDomain) {
+    domainToggle.disabled = true;
+    domainLabel.classList.add("muted");
+  }
+
+  // Load saved settings
+  chrome.storage.sync.get(["enabled_global", "enabled_domains"], (data) => {
+    globalToggle.checked = data.enabled_global !== false; // default: true
+
+    if (currentDomain) {
+      const domains = data.enabled_domains || {};
+      domainToggle.checked = domains[currentDomain] !== false; // default: true  
+    }
+  });
+});
+
+// Persist global toggle
+globalToggle.addEventListener("change", () => {
+  chrome.storage.sync.set({ enabled_global: globalToggle.checked });
+});
+
+// Persist domain toggle; turning a domain off also clears its consent
+domainToggle.addEventListener("change", () => {
+  chrome.storage.sync.get(["enabled_domains", "confirmed_domains"], (data) => {  
+    const domains = data.enabled_domains || {};
+    domains[currentDomain] = domainToggle.checked;
+
+    const update = { enabled_domains: domains };
+
+    if (!domainToggle.checked) {
+      const confirmed = data.confirmed_domains || {};
+      delete confirmed[currentDomain];
+      update.confirmed_domains = confirmed;
+    }
+
+    chrome.storage.sync.set(update);
+  });
+});
+
+// Open edit profile in a new tab
+document.getElementById("edit-profile-btn").addEventListener("click", () => {    
+  chrome.tabs.create({ url: chrome.runtime.getURL("profile/edit-profile.html") });
+});
+```
+
+### 3.13. `profile/edit-profile.html`
+
+**Description:**
+This is the HTML file for the "Edit Profile" page. It provides a form for the user to enter and save their personal information.
+
+**Code:**
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Edit Profile — Workday Autofill</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+      .header {
+        background: #1a73e8;
+        color: white;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+      .header-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .container {
+        max-width: 560px;
+        margin: 32px auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+      .form-header {
+        padding: 20px 24px 16px;
+        border-bottom: 1px solid #dadce0;
+      }
+      .form-header h2 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #202124;
+      }
+      .form-header p {
+        font-size: 13px;
+        color: #5f6368;
+        margin-top: 4px;
+        line-height: 1.5;
+      }
+      .form-body {
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .form-row.full {
+        grid-template-columns: 1fr;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #5f6368;
+      }
+      .optional {
+        font-weight: 400;
+        color: #9aa0a6;
+      }
+      input {
+        padding: 10px 12px;
+        border: 1px solid #dadce0;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #202124;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      input:focus {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+      }
+      .form-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #dadce0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .status {
+        font-size: 13px;
+        color: #5f6368;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .status.visible {
+        opacity: 1;
+      }
+      .status.success {
+        color: #188038;
+      }
+      .status.error {
+        color: #c5221f;
+      }
+      .save-btn {
+        padding: 10px 24px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .save-btn:hover {
+        background: #1557b0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img id="logo" alt="" />
+      <span class="header-title">Workday Autofill — Edit Profile</span>        
+    </div>
+    <div class="container">
+      <div class="form-header">
+        <h2>Your Profile</h2>
+        <p>This information will be used to autofill Workday job applications. Data is saved to your Chrome account and syncs across devices.</p>
+      </div>
+      <div class="form-body">
+        <div class="form-row">
+          <div class="field">
+            <label for="firstName">First Name</label>
+            <input id="firstName" type="text" placeholder="First name" />        
+          </div>
+          <div class="field">
+            <label for="lastName">Last Name</label>
+            <input id="lastName" type="text" placeholder="Last name" />
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="your@email.com" />       
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="phoneNumber">Phone Number</label>
+            <input id="phoneNumber" type="tel" placeholder="3051234567" />       
+          </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="phoneType">Phone Number</label>
+            <input id="phoneType" type="text" placeholder="Mobile" value="Mobile"/>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="addressLine1">Address Line 1</label>
+            <input id="addressLine1" type="text" placeholder="123 Main Street" />
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="addressLine2">Address Line 2 <span class="optional">(optional)</span></label>
+            <input id="addressLine2" type="text" placeholder="Apt, Suite, etc." />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="city">City</label>
+            <input id="city" type="text" placeholder="Miami" />
+          </div>
+          <div class="field">
+            <label for="state">State</label>
+            <input id="state" type="text" placeholder="Florida" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="zipCode">Zip Code</label>
+            <input id="zipCode" type="text" placeholder="33199" />
+          </div>
+          <div class="field">
+            <label for="country">Country</label>
+            <input id="country" type="text" placeholder="United States of America" />
+          </div>
+        </div>
+      </div>
+      <div class="form-footer">
+        <span class="status" id="status"></span>
+        <button class="save-btn" id="save-btn">Save Profile</button>
+      </div>
+    </div>
+    <script src="edit-profile.js"></script>
+  </body>
+</html>
+```
+
+### 3.14. `profile/edit-profile.js`
+
+**Description:**
+This is the JavaScript file for the "Edit Profile" page. It handles loading the user's saved profile into the form and saving the updated profile to `chrome.storage`.
+
+**Code:**
+```javascript
+// Workday Autofill — Edit Profile Logic
+
+const FIELDS = [
+  "firstName",
+  "lastName",
+  "email",
+  "phoneNumber",
+  "phoneType",
+  "addressLine1",
+  "addressLine2",
+  "city",
+  "state",
+  "zipCode",
+  "country",
+];
+
+document.getElementById("logo").src =
+  chrome.runtime.getURL("extension-logo.png");
+
+// Load saved profile into form fields
+chrome.storage.sync.get(["profile"], (data) => {
+  const profile = data.profile || {};
+  FIELDS.forEach((key) => {
+    const input = document.getElementById(key);
+    if (input && profile[key] != null) input.value = profile[key];
+  });
+});
+
+// Save profile on button click
+document.getElementById("save-btn").addEventListener("click", () => {
+  const profile = {};
+  FIELDS.forEach((key) => {
+    const input = document.getElementById(key);
+    if (input) profile[key] = input.value.trim();
+  });
+
+  chrome.storage.sync.set({ profile }, () => {
+    const status = document.getElementById("status");
+    if (chrome.runtime.lastError) {
+      status.textContent = "Error saving. Please try again.";
+      status.className = "status error visible";
+    } else {
+      status.textContent = "Profile saved!";
+      status.className = "status success visible";
+      setTimeout(() => {
+        status.className = "status";
+      }, 3000);
+    }
+  });
+});
+```
+
+### 3.15. `.gitignore`
+
+**Description:**
+This file tells Git which files and directories to ignore.
+
+**Code:**
+```
+.env
+prompt*
+CLAUDE.md
+```
+
+### 3.16. `extension-logo.png`
+
+**Description:**
+This is the icon for the extension. It is a PNG image. You can use any 128x128 PNG image for this.
+
+## 4. How to Load the Extension in Chrome
+
+1.  **Open Chrome** and navigate to `chrome://extensions/`.
+2.  **Enable Developer mode** by clicking the toggle switch in the top-right corner.
+3.  **Click the "Load unpacked" button** that appears.
+4.  **Select the `chrome_extension` directory** that contains all the files listed above.
+5.  The extension should now be loaded and active. You will see its icon in the Chrome toolbar.
