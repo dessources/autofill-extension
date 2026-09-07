@@ -36,3 +36,9 @@ const DEMO_PROFILE = {
   phoneNumber: "3051234567",
   country: "United States",
 };
+
+function getCompanyId() {
+  const host = window.location.hostname;
+  if (host.includes("ibm.com")) return "ibm";
+  return host.split(".")[0];
+}

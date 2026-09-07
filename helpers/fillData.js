@@ -5,10 +5,31 @@ function fillData() {
   let filledCount = 0;
 
   simpleMappedFields.forEach(({ element, value }) => {
-    if (element && !element.value && value) {
-      element.value = value;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      filledCount++;
+    if (!element || value === undefined || value === null) return;
+    if (element.tagName === "SELECT") {
+      if (!element.value) {
+        for (const option of element.options) {
+          if (option.text.trim().toLowerCase() === value.trim().toLowerCase() ||
+              option.dataset?.optionName?.trim().toLowerCase() === value.trim().toLowerCase()) {
+            element.value = option.value;
+            element.dispatchEvent(new Event("change", { bubbles: true }));
+            filledCount++;
+            break;
+          }
+        }
+      }
+    } else if (element.type === "radio" || element.type === "checkbox") {
+        if (!element.checked && value === true) {
+            element.click();
+            filledCount++;
+        }
+    } else {
+      if (!element.value) {
+        element.value = value;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        filledCount++;
+      }
     }
   });
 

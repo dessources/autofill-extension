@@ -14,7 +14,7 @@ console.log(
 chrome.storage.sync.get(
   ["enabled_global", "enabled_domains", "confirmed_domains"],
   (data) => {
-    const domain = window.location.hostname.split(".")[0]; // e.g. "github" from "github.myworkdayjobs.com"
+    const domain = getCompanyId(); // e.g. "github" or "ibm"
     const enabledDomains = data.enabled_domains || {};
     const domainAllowed = enabledDomains[domain] !== false;
 

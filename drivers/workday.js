@@ -2,7 +2,7 @@
 // Defines getMappedFields() for *.myworkdayjobs.com
 // Note: data-automation-id is on wrapper divs — use input IDs directly (except email)
 
-function getMappedFields() {
+function getWorkdayMappedFields() {
   const simpleMappedFields = [];
   const complexMappedFields = [];
   const p = activeProfile;

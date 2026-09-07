@@ -10,17 +10,19 @@
   "web_accessible_resources": [
     {
       "resources": ["extension-logo.png"],
-      "matches": ["*://*.myworkdayjobs.com/*"]
+      "matches": ["*://*.myworkdayjobs.com/*", "*://careers.ibm.com/*"]
     }
   ],
   "permissions": ["storage", "activeTab"],
   "content_scripts": [
     {
-      "matches": ["*://*.myworkdayjobs.com/*"],
+      "matches": ["*://*.myworkdayjobs.com/*", "*://careers.ibm.com/*"],
       "js": [
         "styles.js",
         "util.js",
         "drivers/workday.js",
+        "drivers/ibm.js",
+        "drivers/index.js",
         "helpers/fillData.js",
         "helpers/applyStyles.js",
         "helpers/runAutofillSequence.js",

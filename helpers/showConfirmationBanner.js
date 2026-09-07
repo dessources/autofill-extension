@@ -26,7 +26,7 @@ function showConfirmationBanner() {
   };
 
   confirmBtn.addEventListener("click", () => {
-    const domain = window.location.hostname.split(".")[0];
+    const domain = getCompanyId();
     chrome.storage.sync.get(["confirmed_domains"], (data) => {
       const confirmed = data.confirmed_domains || {};
       confirmed[domain] = true;
