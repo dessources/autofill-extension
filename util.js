@@ -1,26 +1,26 @@
-// Shared UI constants for Workday Autofill
+// Shared UI constants for Job Autofill
 // Loaded before content.js in shared scope
 
 const LOGO_FILENAME = "extension-logo.png";
 
 const MODAL_IDS = {
-  modal:   "workday-autofill-modal",
-  confirm: "workday-autofill-confirm",
-  cancel:  "workday-autofill-cancel-btn",
-  close:   "workday-autofill-cancel",
+  modal:   "job-autofill-modal",
+  confirm: "job-autofill-confirm",
+  cancel:  "job-autofill-cancel-btn",
+  close:   "job-autofill-cancel",
 };
 
 const MODAL_HTML = `
-  <div class="waf-header">
-    <img class="waf-logo" src="${chrome.runtime.getURL(LOGO_FILENAME)}" alt="">
-    <span class="waf-header-title">Workday Autofill</span>
-    <button class="waf-close" id="${MODAL_IDS.close}">✕</button>
+  <div class="jaf-header">
+    <img class="jaf-logo" src="${chrome.runtime.getURL(LOGO_FILENAME)}" alt="">
+    <span class="jaf-header-title">Job Autofill</span>
+    <button class="jaf-close" id="${MODAL_IDS.close}">✕</button>
   </div>
-  <div class="waf-body">
-    <p class="waf-headline">Application page detected!</p>
-    <p class="waf-sub">Fill your application fields automatically using your saved profile.</p>
-    <button class="waf-confirm-btn" id="${MODAL_IDS.confirm}">Autofill Now</button>
-    <button class="waf-cancel-btn" id="${MODAL_IDS.cancel}">No Thanks</button>
+  <div class="jaf-body">
+    <p class="jaf-headline">Application page detected!</p>
+    <p class="jaf-sub">Fill your application fields automatically using your saved profile.</p>
+    <button class="jaf-confirm-btn" id="${MODAL_IDS.confirm}">Autofill Now</button>
+    <button class="jaf-cancel-btn" id="${MODAL_IDS.cancel}">No Thanks</button>
   </div>
 `;
 
@@ -35,6 +35,9 @@ const DEMO_PROFILE = {
   zipCode: "33199",
   phoneNumber: "3051234567",
   country: "United States",
+  birthMonth: "November",
+  birthDay: "7",
+  availableStartDate: "05/2027",
 };
 
 function getCompanyId() {

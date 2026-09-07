@@ -22,7 +22,7 @@ function showConfirmationBanner() {
   const dismiss = () => {
     modal.remove();
     styleTag.remove();
-    console.log("[Workday Autofill] User declined - autofill disabled");
+    console.log("[Job Autofill] User declined - autofill disabled");
   };
 
   confirmBtn.addEventListener("click", () => {
@@ -34,7 +34,7 @@ function showConfirmationBanner() {
         modal.remove();
         styleTag.remove();
         startAutofill();
-        console.log(`[Workday Autofill] Consent saved for ${domain} - autofill started`);
+        console.log(`[Job Autofill] Consent saved for ${domain} - autofill started`);
       });
     });
   });

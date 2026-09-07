@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Edit Profile — Workday Autofill</title>
+    <title>Edit Profile — Job Autofill</title>
     <style>
       * {
         box-sizing: border-box;
@@ -139,12 +139,12 @@
   <body>
     <div class="header">
       <img id="logo" alt="" />
-      <span class="header-title">Workday Autofill — Edit Profile</span>
+      <span class="header-title">Job Autofill — Edit Profile</span>
     </div>
     <div class="container">
       <div class="form-header">
         <h2>Your Profile</h2>
-        <p>This information will be used to autofill Workday job applications. Data is saved to your Chrome account and syncs across devices.</p>
+        <p>This information will be used to autofill job applications. Data is saved to your Chrome account and syncs across devices.</p>
       </div>
       <div class="form-body">
         <div class="form-row">
@@ -204,6 +204,22 @@
           <div class="field">
             <label for="country">Country</label>
             <input id="country" type="text" placeholder="United States of America" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="birthMonth">Birth Month <span class="optional">(optional)</span></label>
+            <input id="birthMonth" type="text" placeholder="November" />
+          </div>
+          <div class="field">
+            <label for="birthDay">Birth Day <span class="optional">(optional)</span></label>
+            <input id="birthDay" type="text" placeholder="7" />
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="field">
+            <label for="availableStartDate">Available Start Date <span class="optional">(optional)</span></label>
+            <input id="availableStartDate" type="text" placeholder="05/2027" />
           </div>
         </div>
       </div>

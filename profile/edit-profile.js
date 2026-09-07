@@ -1,4 +1,4 @@
-// Workday Autofill — Edit Profile Logic
+// Job Autofill — Edit Profile Logic
 
 const FIELDS = [
   "firstName",
@@ -12,6 +12,9 @@ const FIELDS = [
   "state",
   "zipCode",
   "country",
+  "birthMonth",
+  "birthDay",
+  "availableStartDate",
 ];
 
 document.getElementById("logo").src =

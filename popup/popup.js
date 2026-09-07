@@ -1,4 +1,4 @@
-// Workday Autofill — Popup Logic
+// Job Autofill — Popup Logic
 
 document.getElementById("logo").src = chrome.runtime.getURL("extension-logo.png");
 

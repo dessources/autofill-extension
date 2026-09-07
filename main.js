@@ -1,4 +1,4 @@
-// Workday Autofill - Main Entry Point
+// Job Autofill - Main Entry Point
 // Runs on *.myworkdayjobs.com pages
 
 // Active profile: set by startAutofill(), read by getMappedFields() in the active driver
@@ -7,7 +7,7 @@ let activeProfile = null;
 // getMappedFields() is provided by the active ATS driver (e.g. drivers/workday.js)
 
 console.log(
-  "[Workday Autofill] Content script loaded on:",
+  "[Job Autofill] Content script loaded on:",
   window.location.href,
 );
 

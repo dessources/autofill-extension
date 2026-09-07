@@ -1,6 +1,6 @@
 {
-  "name": "Workday Autofill",
-  "description": "Helps students fill out Workday job applications",
+  "name": "Job Autofill",
+  "description": "Helps students fill out job applications",
   "version": "1.0",
   "manifest_version": 3,
   "action": {

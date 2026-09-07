@@ -1,8 +1,8 @@
-# Workday Autofill Chrome Extension: A Step-by-Step Guide
+# Job Autofill Chrome Extension: A Step-by-Step Guide
 
 ## 1. Project Overview
 
-This document provides a detailed walkthrough of the Workday Autofill Chrome Extension. The extension is designed to help users automatically fill out job applications on Workday sites (`*.myworkdayjobs.com`). It is built using vanilla JavaScript with a focus on a clean, modular architecture that separates concerns into different files and directories. The extension uses content scripts to interact with Workday pages, a popup for user settings, and a dedicated page for editing the user's profile data.
+This document provides a detailed walkthrough of the Job Autofill Chrome Extension. The extension is designed to help users automatically fill out job applications on Workday sites (`*.myworkdayjobs.com`). It is built using vanilla JavaScript with a focus on a clean, modular architecture that separates concerns into different files and directories. The extension uses content scripts to interact with Workday pages, a popup for user settings, and a dedicated page for editing the user's profile data.
 
 ## 2. Project Structure
 
@@ -51,7 +51,7 @@ This is the core configuration file for the Chrome extension. It defines the ext
 **Code:**
 ```json
 {
-  "name": "Workday Autofill",
+  "name": "Job Autofill",
   "description": "Helps students fill out Workday job applications",
   "version": "1.0",
   "manifest_version": 3,
@@ -93,7 +93,7 @@ This is the main entry point for the content script. It runs on Workday pages, c
 
 **Code:**
 ```javascript
-// Workday Autofill - Main Entry Point
+// Job Autofill - Main Entry Point
 // Runs on *.myworkdayjobs.com pages
 
 // Active profile: set by startAutofill(), read by getMappedFields() in the active driver
@@ -102,7 +102,7 @@ let activeProfile = null;
 // getMappedFields() is provided by the active ATS driver (e.g. drivers/workday.js)
 
 console.log(
-  "[Workday Autofill] Content script loaded on:",
+  "[Job Autofill] Content script loaded on:",
   window.location.href,
 );
 
@@ -132,7 +132,7 @@ This file defines the CSS styles used by the extension, including the highlight 
 
 **Code:**
 ```javascript
-// Style constants for Workday Autofill
+// Style constants for Job Autofill
 // This file is loaded before content.js and shares the same scope
 
 const STYLES = {
@@ -147,7 +147,7 @@ const STYLES = {
   //via the es6-string-html vscode extension
 
   modalCSS: /*CSS*/ `
-    #workday-autofill-modal {
+    #job-autofill-modal {
       position: fixed;
       top: 100px;
       right: 20px;
@@ -159,7 +159,7 @@ const STYLES = {
       z-index: 999999;
       overflow: hidden;
     }
-    #workday-autofill-modal .waf-header {
+    #job-autofill-modal .jaf-header {
       background: #1a73e8;
       color: white;
       padding: 14px 16px;
@@ -168,19 +168,19 @@ const STYLES = {
       gap: 10px;
       user-select: none;
     }
-    #workday-autofill-modal .waf-logo {
+    #job-autofill-modal .jaf-logo {
       width: 24px;
       height: 24px;
       object-fit: contain;
       flex-shrink: 0;
     }
-    #workday-autofill-modal .waf-header-title {
+    #job-autofill-modal .jaf-header-title {
       font-size: 16px;
       font-weight: 600;
       flex: 1;
       margin: 0;
     }
-    #workday-autofill-modal .waf-close {
+    #job-autofill-modal .jaf-close {
       background: none;
       border: none;
       color: white;
@@ -190,23 +190,23 @@ const STYLES = {
       line-height: 1;
       opacity: 0.8;
     }
-    #workday-autofill-modal .waf-close:hover { opacity: 1; }
-    #workday-autofill-modal .waf-body {
+    #job-autofill-modal .jaf-close:hover { opacity: 1; }
+    #job-autofill-modal .jaf-body {
       padding: 20px 16px;
     }
-    #workday-autofill-modal .waf-headline {
+    #job-autofill-modal .jaf-headline {
       font-size: 15px;
       font-weight: 600;
       color: #202124;
       margin: 0 0 8px;
     }
-    #workday-autofill-modal .waf-sub {
+    #job-autofill-modal .jaf-sub {
       font-size: 13px;
       color: #5f6368;
       margin: 0 0 20px;
       line-height: 1.5;
     }
-    #workday-autofill-modal .waf-confirm-btn {
+    #job-autofill-modal .jaf-confirm-btn {
       width: 100%;
       padding: 10px;
       background: #1a73e8;
@@ -219,8 +219,8 @@ const STYLES = {
       margin-bottom: 8px;
       box-sizing: border-box;
     }
-    #workday-autofill-modal .waf-confirm-btn:hover { background: #1557b0; }      
-    #workday-autofill-modal .waf-cancel-btn {
+    #job-autofill-modal .jaf-confirm-btn:hover { background: #1557b0; }      
+    #job-autofill-modal .jaf-cancel-btn {
       width: 100%;
       padding: 10px;
       background: transparent;
@@ -231,7 +231,7 @@ const STYLES = {
       cursor: pointer;
       box-sizing: border-box;
     }
-    #workday-autofill-modal .waf-cancel-btn:hover { background: #f8f9fa; }       
+    #job-autofill-modal .jaf-cancel-btn:hover { background: #f8f9fa; }       
   `,
 };
 ```
@@ -243,29 +243,29 @@ This file contains shared utility constants and HTML templates used across the e
 
 **Code:**
 ```javascript
-// Shared UI constants for Workday Autofill
+// Shared UI constants for Job Autofill
 // Loaded before content.js in shared scope
 
 const LOGO_FILENAME = "extension-logo.png";
 
 const MODAL_IDS = {
-  modal:   "workday-autofill-modal",
-  confirm: "workday-autofill-confirm",
-  cancel:  "workday-autofill-cancel-btn",
-  close:   "workday-autofill-cancel",
+  modal:   "job-autofill-modal",
+  confirm: "job-autofill-confirm",
+  cancel:  "job-autofill-cancel-btn",
+  close:   "job-autofill-cancel",
 };
 
 const MODAL_HTML = `
-  <div class="waf-header">
-    <img class="waf-logo" src="${chrome.runtime.getURL(LOGO_FILENAME)}" alt="">
-    <span class="waf-header-title">Workday Autofill</span>
-    <button class="waf-close" id="${MODAL_IDS.close}">✔</button>
+  <div class="jaf-header">
+    <img class="jaf-logo" src="${chrome.runtime.getURL(LOGO_FILENAME)}" alt="">
+    <span class="jaf-header-title">Job Autofill</span>
+    <button class="jaf-close" id="${MODAL_IDS.close}">✔</button>
   </div>
-  <div class="waf-body">
-    <p class="waf-headline">Application page detected!</p>
-    <p class="waf-sub">Fill your application fields automatically using your saved profile.</p>
-    <button class="waf-confirm-btn" id="${MODAL_IDS.confirm}">Autofill Now</button>
-    <button class="waf-cancel-btn" id="${MODAL_IDS.cancel}">No Thanks</button>
+  <div class="jaf-body">
+    <p class="jaf-headline">Application page detected!</p>
+    <p class="jaf-sub">Fill your application fields automatically using your saved profile.</p>
+    <button class="jaf-confirm-btn" id="${MODAL_IDS.confirm}">Autofill Now</button>
+    <button class="jaf-cancel-btn" id="${MODAL_IDS.cancel}">No Thanks</button>
   </div>
 `;
 
@@ -430,7 +430,7 @@ function fillData() {
   });
 
   if (filledCount > 0) {
-    console.log(`[Workday Autofill] Filled ${filledCount} fields.`);
+    console.log(`[Job Autofill] Filled ${filledCount} fields.`);
   }
 }
 ```
@@ -481,7 +481,7 @@ function showConfirmationBanner() {
   const dismiss = () => {
     modal.remove();
     styleTag.remove();
-    console.log("[Workday Autofill] User declined - autofill disabled");
+    console.log("[Job Autofill] User declined - autofill disabled");
   };
 
   confirmBtn.addEventListener("click", () => {
@@ -493,7 +493,7 @@ function showConfirmationBanner() {
         modal.remove();
         styleTag.remove();
         startAutofill();
-        console.log(`[Workday Autofill] Consent saved for ${domain} - autofill started`);
+        console.log(`[Job Autofill] Consent saved for ${domain} - autofill started`);
       });
     });
   });
@@ -621,7 +621,7 @@ This is the HTML file for the extension's popup. It provides toggles for enablin
   <body>
     <div class="header">
       <img id="logo" alt="" />
-      <span class="header-title">Workday Autofill</span>
+      <span class="header-title">Job Autofill</span>
     </div>
     <div class="body">
       <div class="toggle-row">
@@ -646,7 +646,7 @@ This is the JavaScript file for the popup. It handles the logic for the toggles 
 
 **Code:**
 ```javascript
-// Workday Autofill — Popup Logic
+// Job Autofill — Popup Logic
 
 document.getElementById("logo").src = chrome.runtime.getURL("extension-logo.png");
 
@@ -721,7 +721,7 @@ This is the HTML file for the "Edit Profile" page. It provides a form for the us
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Edit Profile — Workday Autofill</title>
+    <title>Edit Profile — Job Autofill</title>
     <style>
       * {
         box-sizing: border-box;
@@ -858,7 +858,7 @@ This is the HTML file for the "Edit Profile" page. It provides a form for the us
   <body>
     <div class="header">
       <img id="logo" alt="" />
-      <span class="header-title">Workday Autofill — Edit Profile</span>        
+      <span class="header-title">Job Autofill — Edit Profile</span>        
     </div>
     <div class="container">
       <div class="form-header">
@@ -943,7 +943,7 @@ This is the JavaScript file for the "Edit Profile" page. It handles loading the 
 
 **Code:**
 ```javascript
-// Workday Autofill — Edit Profile Logic
+// Job Autofill — Edit Profile Logic
 
 const FIELDS = [
   "firstName",
