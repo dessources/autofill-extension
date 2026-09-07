@@ -20,9 +20,21 @@ const IBM_DEFAULTS = {
   protectedVeteran: "No",
   veteranStatus: "Non-Veteran",
   disability: "No, I do not have a disability and have not had one in the past",
+  
+  // Education & Relocation
   attendedUniversity: "Yes",
   universityCountry: "United States",
   universityName: "OTHER",
+  universityNameText: "Florida international University",
+  degree: "Bachelor's Degree",
+  studySpecialization: "Computer Science",
+  relocate: "Yes",
+  
+  // Additional Compliance / Context
+  otherLocations: "Yes",
+  differentAddress: "No",
+  workedAtIBM: "No",
+  availableStartDate: "05/2027",
   certifyInaccurate: true 
 };
 
@@ -32,23 +44,13 @@ function getIbmMappedFields() {
   const p = activeProfile || {};
   const d = IBM_DEFAULTS;
 
-  function addFieldByLabel(labelText, profileValue) {
+  // Flexible resolver that works whether IBM renders the question as a radio group (legend) or dropdown (label)
+  function addFieldFlexible(labelText, profileValue) {
     if (!profileValue) return;
-    const labels = Array.from(document.querySelectorAll('label.tc_formLabel'));
-    const label = labels.find(l => l.textContent.trim().toLowerCase().includes(labelText.toLowerCase()));
-    if (label) {
-      const forAttr = label.getAttribute('for');
-      if (forAttr) {
-        const el = document.getElementById(forAttr);
-        if (el) simpleMappedFields.push({ element: el, value: profileValue });
-      }
-    }
-  }
-
-  function addRadioGroup(legendText, profileValue) {
-    if (!profileValue) return;
+    
+    // 1. Try resolving as a radio group (via legend)
     const legends = Array.from(document.querySelectorAll('legend.tc_formLabel'));
-    const legend = legends.find(l => l.textContent.trim().toLowerCase().includes(legendText.toLowerCase()));
+    const legend = legends.find(l => l.textContent.trim().toLowerCase().includes(labelText.toLowerCase()));
     if (legend) {
         const fieldset = legend.closest('fieldset');
         if (fieldset) {
@@ -56,9 +58,26 @@ function getIbmMappedFields() {
             const match = labels.find(l => l.textContent.trim().toLowerCase() === profileValue.trim().toLowerCase());
             if (match) {
                 const radio = document.getElementById(match.getAttribute('for'));
-                if (radio) simpleMappedFields.push({ element: radio, value: true });
+                if (radio) {
+                    simpleMappedFields.push({ element: radio, value: true });
+                    return; // found it as a radio!
+                }
             }
         }
+    }
+    
+    // 2. Try resolving as a standard input/dropdown (via label for=...)
+    const labels = Array.from(document.querySelectorAll('label.tc_formLabel'));
+    const label = labels.find(l => l.textContent.trim().toLowerCase().includes(labelText.toLowerCase()));
+    if (label) {
+      const forAttr = label.getAttribute('for');
+      if (forAttr) {
+        const el = document.getElementById(forAttr);
+        if (el) {
+            simpleMappedFields.push({ element: el, value: profileValue });
+            return;
+        }
+      }
     }
   }
 
@@ -83,41 +102,50 @@ function getIbmMappedFields() {
   }
 
   // Map Standard Profile Data
-  addFieldByLabel('Legal first name', p.firstName);
-  addFieldByLabel('Legal last name', p.lastName);
-  addFieldByLabel('Address line 1', p.addressLine1);
-  addFieldByLabel('Address line 2', p.addressLine2);
-  addFieldByLabel('City', p.city);
-  addFieldByLabel('Zip code', p.zipCode);
-  addFieldByLabel('Postal code', p.zipCode); // Alternative label
-  addFieldByLabel('Home Email', p.email);
-  addFieldByLabel('Phone number', p.phoneNumber);
-  addFieldByLabel('Country', p.country);
-  addFieldByLabel('State', p.state);
-  addFieldByLabel('Province', p.state); // Alternative label
+  addFieldFlexible('Legal first name', p.firstName);
+  addFieldFlexible('Legal last name', p.lastName);
+  addFieldFlexible('Address line 1', p.addressLine1);
+  addFieldFlexible('Address line 2', p.addressLine2);
+  addFieldFlexible('City', p.city);
+  addFieldFlexible('Zip code', p.zipCode);
+  addFieldFlexible('Postal code', p.zipCode); 
+  addFieldFlexible('Home Email', p.email);
+  addFieldFlexible('Phone number', p.phoneNumber);
+  addFieldFlexible('Country', p.country);
+  addFieldFlexible('State', p.state);
+  addFieldFlexible('Province', p.state); 
   
   // Map IBM-Specific Questions (Page 1)
   addRadioByExactOption(d.privacyAgreement);
-  addRadioGroup('resident of China or South Korea', d.residentChinaKorea);
+  addFieldFlexible('resident of China or South Korea', d.residentChinaKorea);
   addRadioByExactOption(d.consentProcessing);
-  addRadioGroup('If you have a preferred name', d.hasPreferredName);
+  addFieldFlexible('If you have a preferred name', d.hasPreferredName);
 
   // Map IBM-Specific Questions (Page 2)
-  addFieldByLabel('How did you hear about this opportunity', d.source);
-  addRadioGroup('authorized to work in the United States', d.authorizedToWork);
-  addRadioGroup('require IBM sponsorship', d.requireSponsorship);
-  addRadioGroup('Gender', d.gender);
-  addRadioGroup('Ethnicity', d.ethnicity);
-  addFieldByLabel('Race', d.race); 
+  addFieldFlexible('How did you hear about this opportunity', d.source);
+  addFieldFlexible('authorized to work in the United States', d.authorizedToWork);
+  addFieldFlexible('require IBM sponsorship', d.requireSponsorship);
+  addFieldFlexible('Gender', d.gender);
+  addFieldFlexible('Ethnicity', d.ethnicity);
+  addFieldFlexible('Race', d.race); 
   
-  addRadioGroup('Are you a veteran?', d.veteran);
-  addRadioGroup('Are you a protected veteran?', d.protectedVeteran);
-  addFieldByLabel('Veteran status', d.veteranStatus); 
+  addFieldFlexible('Are you a veteran?', d.veteran);
+  addFieldFlexible('Are you a protected veteran?', d.protectedVeteran);
+  addFieldFlexible('Veteran status', d.veteranStatus); 
   addRadioByExactOption(d.disability);
   
-  addRadioGroup('Attended university', d.attendedUniversity);
-  addFieldByLabel('country where your University', d.universityCountry);
-  addFieldByLabel('institution where you completed', d.universityName);
+  addFieldFlexible('Attended university', d.attendedUniversity);
+  addFieldFlexible('country where your University', d.universityCountry);
+  addFieldFlexible('institution where you completed', d.universityName);
+  addFieldFlexible('Please tell us the name of you University', d.universityNameText);
+  addFieldFlexible('Degree obtained', d.degree);
+  addFieldFlexible('Study/Specialization', d.studySpecialization);
+  addFieldFlexible('willing to relocate', d.relocate);
+  
+  addFieldFlexible('considered for positions in other locations', d.otherLocations);
+  addFieldFlexible('different from your permanent address', d.differentAddress);
+  addFieldFlexible('worked at IBM before', d.workedAtIBM);
+  addFieldFlexible('available to start full time', d.availableStartDate);
   
   addCheckboxByLabel('I certify', d.certifyInaccurate);
 
